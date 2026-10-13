@@ -1,0 +1,49 @@
+name: ComplyAble accessibility scan
+description: Scan a website against WCAG 2.0/2.1/2.2 AA with ComplyAble and fail the build on accessibility regressions.
+author: ComplyAble
+branding:
+  icon: check-circle
+  color: green
+inputs:
+  api_key:
+    description: ComplyAble API key (store it as a secret, e.g. secrets.COMPLYABLE_API_KEY)
+    required: true
+  url:
+    description: URL to scan, such as your preview deployment
+    required: true
+  standard:
+    description: "WCAG version to test against: 2.0, 2.1 (DOJ ADA Title II), or 2.2"
+    default: "2.1"
+  pages:
+    description: Number of pages to crawl (1-25, capped by your plan)
+    default: "10"
+  fail_on:
+    description: "Fail when WCAG failures at this priority or higher are found: P1, P2, P3, or none"
+    default: P1
+  format:
+    description: "Report file format: junit, json, or text"
+    default: junit
+  output:
+    description: Path to write the report file
+    default: complyable-results.xml
+  cookies:
+    description: Session cookies for pages behind a login, one per line (name=value). Values are masked in logs.
+    default: ""
+  headers:
+    description: "Extra request headers, one per line (Name: value), e.g. x-vercel-protection-bypass. Values are masked."
+    default: ""
+  api_url:
+    description: ComplyAble API base URL
+    default: https://complyable-one.vercel.app
+outputs:
+  score:
+    description: Site score (0-100) for the selected standard
+  passed:
+    description: true when no WCAG failures at or above fail_on were found
+  failing:
+    description: Number of failure instances at or above fail_on
+  report:
+    description: Path to the report file
+runs:
+  using: node24
+  main: index.mjs
