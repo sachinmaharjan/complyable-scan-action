@@ -12,6 +12,7 @@ import { parseArgs } from "node:util";
 const DEFAULT_API = "https://complyable-one.vercel.app";
 const inAction = process.env.GITHUB_ACTIONS === "true" && process.env.INPUT_URL !== undefined;
 const RANK = { P1: 1, P2: 2, P3: 3 };
+const plural = (n, word) => `${n} ${word}${n === 1 ? "" : "s"}`;
 
 function readConfig() {
   if (inAction) {
@@ -121,12 +122,12 @@ function toText(report) {
   const t = report.threshold;
   const lines = [
     `ComplyAble ${report.standard} scan of ${report.url}${report.authenticated ? " (authenticated)" : ""}`,
-    `Score ${s.score}/100 · ${s.pagesScanned} pages · ${s.instances} failure instances (P1 ${s.byPriority.P1}, P2 ${s.byPriority.P2}, P3 ${s.byPriority.P3}) · ${s.rules.review} needs review · ${s.rules.advisory} advisory`,
+    `Score ${s.score}/100 · ${plural(s.pagesScanned, "page")} · ${plural(s.instances, "failure instance")} (P1 ${s.byPriority.P1}, P2 ${s.byPriority.P2}, P3 ${s.byPriority.P3}) · ${s.rules.review} needs review · ${s.rules.advisory} advisory`,
     t.failOn === "none" ? "Threshold: none (report only)" : `${t.passed ? "PASSED" : "FAILED"}: ${t.failingInstances} instances at ${t.failOn} or higher`,
     "",
   ];
   for (const i of aggregate(report).slice(0, 20))
-    lines.push(`  ${i.priority}  ${i.help}  [WCAG ${i.criteria.join(", ") || "—"}]  ${i.instances}× on ${i.pages} page(s)`);
+    lines.push(`  ${i.priority}  ${i.help}  [WCAG ${i.criteria.join(", ") || "—"}]  ${i.instances}× on ${plural(i.pages, "page")}`);
   for (const n of report.notices ?? []) lines.push(`\nNotice: ${n}`);
   if (report.errors?.length) lines.push(`\n${report.errors.length} page(s) could not be scanned.`);
   return lines.join("\n");
@@ -142,7 +143,7 @@ function toMarkdown(report) {
   const pages = report.pages.map((p) => `| ${p.score} | ${p.failed} | ${p.needsReview} | ${p.url} |`);
   return [
     `## ♿ ComplyAble accessibility scan: ${verdict}`,
-    `**${report.standard}** · score **${s.score}/100** · ${s.pagesScanned} pages · ${s.instances} failure instances · ${s.rules.review} need review${report.authenticated ? " · authenticated" : ""}`,
+    `**${report.standard}** · score **${s.score}/100** · ${plural(s.pagesScanned, "page")} · ${plural(s.instances, "failure instance")} · ${s.rules.review} need review${report.authenticated ? " · authenticated" : ""}`,
     "",
     rows.length ? "| Priority | Issue | WCAG | Instances | Pages |\n|---|---|---|---|---|\n" + rows.join("\n") : "No automated WCAG failures found.",
     "",
@@ -188,7 +189,7 @@ async function main() {
         `score=${report.summary.score}\npassed=${report.threshold.passed}\nfailing=${report.threshold.failingInstances}\nreport=${cfg.output ?? ""}\n`,
       );
     for (const i of aggregate(report).filter((i) => meets(i, cfg.failOn)).slice(0, 10))
-      console.log(`::error title=${ghEsc(`${i.priority} WCAG ${i.criteria.join(", ")}: ${i.id}`)}::${ghEsc(`${i.help}: ${i.instances} instance(s) on ${i.pages} page(s)`)}`);
+      console.log(`::error title=${ghEsc(`${i.priority} WCAG ${i.criteria.join(", ")}: ${i.id}`)}::${ghEsc(`${i.help}: ${plural(i.instances, "instance")} on ${plural(i.pages, "page")}`)}`);
   }
   return report.threshold.passed || cfg.failOn === "none" ? 0 : 1;
 }
